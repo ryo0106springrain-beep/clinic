@@ -4733,12 +4733,12 @@
             async saveAllData() {
                 try {
                     const allData = {
-                        appointments: appointments,
-                        patients: patients,
-                        treatments: treatments,
-                        staff: staff,
-                        settings: settings,
-                        devices: devices,
+                        appointments: (typeof appointments !== 'undefined') ? appointments : (window.appointments || []),
+                        patients: (typeof patients !== 'undefined') ? patients : (window.patients || []),
+                        treatments: (typeof treatments !== 'undefined') ? treatments : (window.treatments || []),
+                        staff: (typeof staff !== 'undefined') ? staff : (window.staff || []),
+                        settings: (typeof settings !== 'undefined') ? settings : (window.settings || {}),
+                        devices: (typeof devices !== 'undefined') ? devices : (window.devices || []),
                         lastModified: new Date().toISOString(),
                         clientId: this.clientId
                     };
@@ -4791,13 +4791,37 @@
                         if (onlineData.clientId !== this.clientId) {
                             console.log('🔄 他の端末からの更新を検出');
                             
-                            // グローバル変数を更新
-                            appointments = onlineData.appointments || appointments;
-                            patients = onlineData.patients || patients;
-                            treatments = onlineData.treatments || treatments;
-                            staff = onlineData.staff || staff;
-                            settings = onlineData.settings || settings;
-                            devices = onlineData.devices || devices;
+                            // グローバル変数を安全に更新
+                            if (typeof appointments !== 'undefined') {
+                                appointments = onlineData.appointments || appointments;
+                            } else {
+                                window.appointments = onlineData.appointments || [];
+                            }
+                            if (typeof patients !== 'undefined') {
+                                patients = onlineData.patients || patients;
+                            } else {
+                                window.patients = onlineData.patients || [];
+                            }
+                            if (typeof treatments !== 'undefined') {
+                                treatments = onlineData.treatments || treatments;
+                            } else {
+                                window.treatments = onlineData.treatments || [];
+                            }
+                            if (typeof staff !== 'undefined') {
+                                staff = onlineData.staff || staff;
+                            } else {
+                                window.staff = onlineData.staff || [];
+                            }
+                            if (typeof settings !== 'undefined') {
+                                settings = onlineData.settings || settings;
+                            } else {
+                                window.settings = onlineData.settings || {};
+                            }
+                            if (typeof devices !== 'undefined') {
+                                devices = onlineData.devices || devices;
+                            } else {
+                                window.devices = onlineData.devices || [];
+                            }
                             this.lastModified = onlineData.lastModified;
                             
                             // UIを更新
@@ -18854,9 +18878,63 @@
         document.addEventListener('DOMContentLoaded', () => {
             console.log('🚀 DOM読み込み完了 - 強制初期化開始');
             
-            // マルチ端末同期開始
-            dataManager.startSync();
-            console.log('🔄 マルチ端末同期機能を有効化');
+            // オンラインデータを読み込んでから同期開始
+            async function initializeSync() {
+                try {
+                    console.log('📥 オンラインデータ読み込み開始...');
+                    const onlineData = await dataManager.loadFromOnline();
+                    
+                    if (onlineData && onlineData.appointments) {
+                        console.log('🌐 オンラインデータを適用');
+                        // グローバル変数を安全に更新
+                        if (typeof appointments !== 'undefined') {
+                            appointments = onlineData.appointments || appointments;
+                        } else {
+                            window.appointments = onlineData.appointments || [];
+                        }
+                        if (typeof patients !== 'undefined') {
+                            patients = onlineData.patients || patients;
+                        } else {
+                            window.patients = onlineData.patients || [];
+                        }
+                        if (typeof treatments !== 'undefined') {
+                            treatments = onlineData.treatments || treatments;
+                        } else {
+                            window.treatments = onlineData.treatments || [];
+                        }
+                        if (typeof staff !== 'undefined') {
+                            staff = onlineData.staff || staff;
+                        } else {
+                            window.staff = onlineData.staff || [];
+                        }
+                        if (typeof settings !== 'undefined') {
+                            settings = onlineData.settings || settings;
+                        } else {
+                            window.settings = onlineData.settings || {};
+                        }
+                        if (typeof devices !== 'undefined') {
+                            devices = onlineData.devices || devices;
+                        } else {
+                            window.devices = onlineData.devices || [];
+                        }
+                        dataManager.lastModified = onlineData.lastModified;
+                        
+                        // UIを更新
+                        if (typeof renderCalendar === 'function') renderCalendar();
+                        if (typeof updateStatistics === 'function') updateStatistics();
+                        
+                        console.log('✨ オンラインデータの適用完了');
+                    }
+                } catch (error) {
+                    console.warn('⚠️ 初期データ読み込みエラー:', error);
+                }
+                
+                // マルチ端末同期開始
+                dataManager.startSync();
+                console.log('🔄 マルチ端末同期機能を有効化');
+            }
+            
+            initializeSync();
             
             // テスト表示は無効化
             // setTimeout(() => {
