@@ -4821,9 +4821,8 @@
                             }
                             this.lastModified = onlineData.lastModified;
                             
-                            // UIを更新
-                            renderCalendar();
-                            updateStatistics();
+                            // UI更新は次回ページリロード時に自動反映
+                            console.log('データ同期完了（次回リロード時に表示更新）');
                             
                             console.log('✨ データを他の端末の更新で同期しました');
                         }
@@ -18915,9 +18914,8 @@
                         }
                         dataManager.lastModified = onlineData.lastModified;
                         
-                        // UIを更新
-                        if (typeof renderCalendar === 'function') renderCalendar();
-                        if (typeof updateStatistics === 'function') updateStatistics();
+                        // 初期化時のUI更新は省略（データ読み込み完了）
+                        console.log('初期化データ読み込み完了');
                         
                         console.log('✨ オンラインデータの適用完了');
                     }
