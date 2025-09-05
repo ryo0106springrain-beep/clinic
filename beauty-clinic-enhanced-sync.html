@@ -4756,14 +4756,12 @@
                     if (response.ok) {
                         this.lastModified = allData.lastModified;
                         console.log('💾 全データをオンラインに保存しました（Enhanced版）');
-                        showNotification('データを同期しました', 'success');
                         return true;
                     } else {
                         throw new Error(`HTTP ${response.status}`);
                     }
                 } catch (error) {
                     console.error('❌ オンライン保存エラー:', error);
-                    showNotification('同期エラー（オフラインモード）', 'error');
                     return false;
                 }
             }
@@ -4779,7 +4777,6 @@
                 }, this.syncInterval);
                 
                 console.log(`🔄 リアルタイム同期開始 (${this.syncInterval/1000}秒間隔)`);
-                showNotification('同期機能を開始しました', 'info');
             }
             
             // 更新確認
@@ -4829,7 +4826,6 @@
                             updateStatistics();
                             
                             console.log('✨ データを他の端末の更新で同期しました');
-                            showNotification('他の端末からの更新を反映しました', 'info');
                         }
                     }
                 } catch (error) {
