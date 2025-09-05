@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>美容クリニック施術室管理カレンダー（マルチユーザー版）</title>
+    <style>
+        /* ローディング画面 */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            margin-top: 20px;
+            font-size: 18px;
+            color: #667eea;
+        }
+
+        .error-message {
+            background: #fee;
+            border: 1px solid #fcc;
+            color: #c00;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px;
+            display: none;
+        }
+
+        .sync-indicator {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: white;
+            border: 2px solid #667eea;
+            border-radius: 5px;
+            padding: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            z-index: 1000;
+        }
+
+        .sync-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .sync-icon {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #667eea;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 1s linear infinite;
+        }
+
+        .sync-icon.synced {
+            animation: none;
+            border-color: #48bb78;
+            position: relative;
+        }
+
+        .sync-icon.synced::after {
+            content: '✓';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #48bb78;
+            font-size: 12px;
+        }
+
+        .sync-icon.error {
+            animation: none;
+            border-color: #f56565;
+        }
+
+        .user-indicator {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            background: white;
+            border: 2px solid #667eea;
+            border-radius: 5px;
+            padding: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            z-index: 1000;
+        }
+
+        .active-users {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .user-list {
+            margin-top: 5px;
+        }
+
+        .user-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 12px;
+            margin: 2px 0;
+        }
+
+        .user-status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #48bb78;
+        }
+    </style>
+</head>
+<body>
+    <!-- ローディング画面 -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">データを読み込み中...</div>
+    </div>
+
+    <!-- エラーメッセージ -->
+    <div id="errorMessage" class="error-message"></div>
+
+    <!-- 同期状態インジケーター -->
+    <div class="sync-indicator">
+        <div class="sync-status">
+            <div id="syncIcon" class="sync-icon synced"></div>
+            <div id="syncText">同期済み</div>
+        </div>
+        <div style="font-size: 10px; color: #999; margin-top: 5px;">
+            最終同期: <span id="lastSync">-</span>
+        </div>
+    </div>
+
+    <!-- アクティブユーザー表示 -->
+    <div class="user-indicator">
+        <div class="active-users">アクティブユーザー</div>
+        <div id="userList" class="user-list">
+            <div class="user-item">
+                <div class="user-status-dot"></div>
+                <span>あなた（端末1）</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- メインコンテンツはここに動的に挿入 -->
+    <div id="mainContent"></div>
+
+    <script>
+        // データ管理クラス
+        class DataManager {
+            constructor() {
+                this.appointments = [];
+                this.patients = [];
+                this.staff = [];
+                this.treatments = [];
+                this.devices = [];
+                this.settings = {};
+                this.lastSyncTime = null;
+                this.lastModified = null;
+                this.syncInterval = 5000; // 5秒ごとに同期
+                this.syncTimer = null;
+                this.clientId = this.generateClientId();
+                
+                // JSONBin.io設定
+                this.binId = '68ba4a4a43b1c97be9373a5f'; // 実際のBin ID
+                this.apiKey = '$2a$10$rUJlLkq4wOYmc5W3nJ7I1epb3PqfDqG7TIy6mcdtkZKcuxUiKO46m'; // 実際のAPIキー
+                this.baseUrl = 'https://api.jsonbin.io/v3/b/';
+                
+                // デバッグモード
+                this.debugMode = true;
+            }
+
+            // クライアントID生成
+            generateClientId() {
+                return 'client_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            }
+
+            // データの初期読み込み（JSONBin.ioまたはローカルから）
+            async loadAllData() {
+                try {
+                    console.log('📥 データ読み込み開始...');
+                    
+                    // まずオンラインからデータを取得
+                    const onlineData = await this.loadFromOnline();
+                    
+                    if (onlineData) {
+                        console.log('🌐 オンラインデータを使用');
+                        this.appointments = onlineData.appointments || [];
+                        this.patients = onlineData.patients || [];
+                        this.staff = onlineData.staff || [];
+                        this.treatments = onlineData.treatments || [];
+                        this.settings = onlineData.settings || {};
+                        this.lastModified = onlineData.lastModified;
+                    } else {
+                        // オンライン取得失敗時はローカルまたはデフォルトデータを使用
+                        console.log('📱 ローカル/デフォルトデータを使用');
+                        await this.loadFromLocal();
+                    }
+                    
+                    this.lastSyncTime = new Date();
+                    this.updateSyncStatus('synced');
+                    return true;
+                } catch (error) {
+                    console.error('❌ データ読み込みエラー:', error);
+                    this.showError('データの読み込みに失敗しました。');
+                    return false;
+                }
+            }
+
+            // オンラインからデータを読み込み
+            async loadFromOnline() {
+                try {
+                    this.updateSyncStatus('syncing');
+                    const response = await fetch(`${this.baseUrl}${this.binId}/latest`, {
+                        headers: {
+                            'X-Master-Key': this.apiKey
+                        }
+                    });
+
+                    if (response.ok) {
+                        const result = await response.json();
+                        console.log('📡 オンラインデータ取得成功');
+                        return result.record;
+                    }
+                    return null;
+                } catch (error) {
+                    console.warn('⚠️ オンライン接続エラー:', error);
+                    return null;
+                }
+            }
+
+            // ローカルからデータを読み込み
+            async loadFromLocal() {
+                const dataFiles = [
+                    { name: 'appointments', file: 'appointments.json' },
+                    { name: 'patients', file: 'patients.json' },
+                    { name: 'staff', file: 'staff.json' },
+                    { name: 'treatments', file: 'treatments.json' },
+                    { name: 'settings', file: 'settings.json' }
+                ];
+                
+                for (const dataFile of dataFiles) {
+                    try {
+                        // まずローカルストレージから
+                        const localData = localStorage.getItem(`clinic_${dataFile.name}`);
+                        if (localData) {
+                            this[dataFile.name] = JSON.parse(localData);
+                            console.log(`📱 ${dataFile.name}をローカルから読み込み`);
+                        } else {
+                            // JSONファイルから読み込み
+                            const response = await fetch('./data/' + dataFile.file);
+                            if (response.ok) {
+                                this[dataFile.name] = await response.json();
+                                console.log(`📁 ${dataFile.name}をファイルから読み込み`);
+                            } else {
+                                this.setDefaultData(dataFile.name);
+                            }
+                        }
+                    } catch (error) {
+                        console.warn(`⚠️ ${dataFile.name}読み込みエラー:`, error);
+                        this.setDefaultData(dataFile.name);
+                    }
+                }
+            }
+
+            // デフォルトデータ設定
+            setDefaultData(dataType) {
+                switch(dataType) {
+                    case 'appointments':
+                        this.appointments = [];
+                        break;
+                    case 'patients':
+                        this.patients = [];
+                        break;
+                    case 'staff':
+                        this.staff = [
+                            { id: 'N001', name: '田中看護師', type: 'nurse' },
+                            { id: 'N002', name: '山田看護師', type: 'nurse' }
+                        ];
+                        break;
+                    case 'treatments':
+                        this.treatments = [
+                            { id: 'T001', name: 'フェイシャル', duration: 60 },
+                            { id: 'T002', name: 'ボトックス', duration: 30 }
+                        ];
+                        break;
+                    case 'settings':
+                        this.settings = {
+                            businessHours: { start: '09:00', end: '18:00' },
+                            timeSlotInterval: 30
+                        };
+                        break;
+                }
+            }
+
+            // 全データを統合してオンライン保存
+            async saveAllData() {
+                try {
+                    this.updateSyncStatus('syncing');
+                    
+                    const allData = {
+                        appointments: this.appointments,
+                        patients: this.patients,
+                        staff: this.staff,
+                        treatments: this.treatments,
+                        settings: this.settings,
+                        lastModified: new Date().toISOString(),
+                        clientId: this.clientId
+                    };
+                    
+                    const response = await fetch(`${this.baseUrl}${this.binId}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Master-Key': this.apiKey,
+                            'X-Bin-Name': 'clinic-data'
+                        },
+                        body: JSON.stringify(allData)
+                    });
+
+                    if (response.ok) {
+                        // ローカルにもバックアップ保存
+                        Object.keys(allData).forEach(key => {
+                            if (key !== 'lastModified' && key !== 'clientId') {
+                                localStorage.setItem(`clinic_${key}`, JSON.stringify(allData[key]));
+                            }
+                        });
+                        
+                        // lastModified を更新
+                        this.lastModified = allData.lastModified;
+                        
+                        console.log('💾 全データをオンラインに保存しました');
+                        this.updateSyncStatus('synced');
+                        return true;
+                    } else {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+                } catch (error) {
+                    console.error('❌ オンライン保存エラー:', error);
+                    
+                    // 詳細なデバッグ情報
+                    if (this.debugMode) {
+                        console.error('🔍 デバッグ情報:');
+                        console.error('Bin ID:', this.binId);
+                        console.error('API Key:', this.apiKey ? 'あり（' + this.apiKey.length + '文字）' : 'なし');
+                        console.error('URL:', `${this.baseUrl}${this.binId}`);
+                        console.error('エラー詳細:', error.message);
+                        
+                        // 設定値チェック
+                        if (this.binId === '676001a8ad19ca34f8c8b4c8') {
+                            console.error('⚠️ Bin IDがダミー値のままです！実際の値に変更してください');
+                        }
+                        if (this.apiKey === '$2a$10$example...') {
+                            console.error('⚠️ APIキーがダミー値のままです！実際の値に変更してください');
+                        }
+                    }
+                    
+                    // ユーザーにも分かりやすいエラーを表示
+                    this.showError('予約の保存に失敗しました。設定を確認してください。');
+                    
+                    // オフラインフォールバック
+                    ['appointments', 'patients', 'staff', 'treatments', 'settings'].forEach(key => {
+                        localStorage.setItem(`clinic_${key}`, JSON.stringify(this[key]));
+                    });
+                    
+                    console.log('📱 全データをローカルに保存しました（オフライン）');
+                    this.updateSyncStatus('error');
+                    return false;
+                }
+            }
+
+            // リアルタイム同期の開始
+            startSync() {
+                if (this.syncTimer) {
+                    clearInterval(this.syncTimer);
+                }
+                
+                this.syncTimer = setInterval(async () => {
+                    await this.checkForUpdates();
+                }, this.syncInterval);
+                
+                console.log(`🔄 リアルタイム同期開始 (${this.syncInterval/1000}秒間隔)`);
+            }
+            
+            // リアルタイム同期の停止
+            stopSync() {
+                if (this.syncTimer) {
+                    clearInterval(this.syncTimer);
+                    this.syncTimer = null;
+                    console.log('⏸️ リアルタイム同期停止');
+                }
+            }
+            
+            // 更新確認
+            async checkForUpdates() {
+                try {
+                    const onlineData = await this.loadFromOnline();
+                    if (onlineData && onlineData.lastModified !== this.lastModified) {
+                        // データが更新されている場合
+                        if (onlineData.clientId !== this.clientId) {
+                            console.log('🔄 他の端末からの更新を検出');
+                            this.appointments = onlineData.appointments || [];
+                            this.patients = onlineData.patients || [];
+                            this.staff = onlineData.staff || [];
+                            this.treatments = onlineData.treatments || [];
+                            this.settings = onlineData.settings || {};
+                            this.lastModified = onlineData.lastModified;
+                            
+                            // UIを更新
+                            if (typeof renderAppointments === 'function') renderAppointments();
+                            if (typeof updateStats === 'function') updateStats();
+                            
+                            console.log('✨ データを他の端末の更新で同期しました');
+                        }
+                    }
+                } catch (error) {
+                    console.warn('⚠️ 同期確認エラー:', error);
+                }
+            }
+
+            // データ保存（JSONBin.ioに保存） - 後方互換用
+            async saveData(dataType) {
+                return await this.saveAllData();
+            }
+
+            // 同期状態の更新
+            updateSyncStatus(status) {
+                const syncIcon = document.getElementById('syncIcon');
+                const syncText = document.getElementById('syncText');
+                const lastSyncElement = document.getElementById('lastSync');
+                
+                syncIcon.className = 'sync-icon ' + status;
+                
+                switch(status) {
+                    case 'syncing':
+                        syncText.textContent = '同期中...';
+                        break;
+                    case 'synced':
+                        syncText.textContent = '同期済み';
+                        if (this.lastSyncTime) {
+                            const time = this.lastSyncTime.toLocaleTimeString('ja-JP');
+                            lastSyncElement.textContent = time;
+                        }
+                        break;
+                    case 'error':
+                        syncText.textContent = 'エラー';
+                        break;
+                }
+            }
+
+            // エラー表示
+            showError(message) {
+                const errorElement = document.getElementById('errorMessage');
+                errorElement.textContent = message;
+                errorElement.style.display = 'block';
+                setTimeout(() => {
+                    errorElement.style.display = 'none';
+                }, 5000);
+            }
+
+            // 自動同期開始
+            startAutoSync() {
+                setInterval(() => {
+                    this.syncData();
+                }, this.syncInterval);
+            }
+
+            // データ同期
+            async syncData() {
+                this.updateSyncStatus('syncing');
+                
+                // 最新データを取得
+                const success = await this.loadAllData();
+                
+                if (success) {
+                    this.updateSyncStatus('synced');
+                    
+                    // UIを更新（カレンダーアプリケーションに通知）
+                    if (window.calendar) {
+                        window.calendar.onDataUpdated(this);
+                    }
+                } else {
+                    this.updateSyncStatus('error');
+                }
+            }
+        }
+
+        // 初期化
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log('🚀 マルチユーザー版を起動中...');
+            
+            // データマネージャーの初期化
+            window.dataManager = new DataManager();
+            
+            // データ読み込み
+            const success = await window.dataManager.loadAllData();
+            
+            if (success) {
+                // リアルタイム同期を開始
+                window.dataManager.startSync();
+                
+                // ローディング画面を非表示
+                document.getElementById('loadingOverlay').style.display = 'none';
+                
+                // メインアプリケーションを読み込み
+                loadMainApplication();
+                
+                // 自動同期開始
+                window.dataManager.startAutoSync();
+            } else {
+                document.getElementById('loadingOverlay').innerHTML = 
+                    '<div style="color: red;">データの読み込みに失敗しました。<br>リロードしてください。</div>';
+            }
+        });
+
+        // メインアプリケーションの読み込み
+        function loadMainApplication() {
+            console.log('📱 メインアプリケーションを読み込み中...');
+            
+            // 簡単なカレンダーアプリケーションのUI
+            document.getElementById('mainContent').innerHTML = `
+                <div class="main-app">
+                    <header class="app-header">
+                        <h1>🏥 美容クリニック予約システム（動作確認版）</h1>
+                        <div class="data-stats">
+                            <span>📅 予約: <strong id="appointmentCount">${window.dataManager.appointments.length}</strong>件</span>
+                            <span>👥 患者: <strong id="patientCount">${window.dataManager.patients.length}</strong>名</span>
+                            <span>👩‍⚕️ スタッフ: <strong id="staffCount">${window.dataManager.staff.length}</strong>名</span>
+                        </div>
+                    </header>
+
+                    <div class="app-body">
+                        <div class="left-panel">
+                            <div class="panel-section">
+                                <h3>📋 予約一覧</h3>
+                                <div id="appointmentsList" class="appointments-list">
+                                    <!-- 予約リストをここに表示 -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="right-panel">
+                            <div class="panel-section">
+                                <h3>➕ 新規予約追加</h3>
+                                <form id="appointmentForm" class="appointment-form">
+                                    <div class="form-group">
+                                        <label>患者名:</label>
+                                        <input type="text" id="patientName" placeholder="患者名を入力" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>日付:</label>
+                                        <input type="date" id="appointmentDate" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>時間:</label>
+                                        <input type="time" id="appointmentTime" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>施術:</label>
+                                        <select id="treatmentSelect" required>
+                                            <option value="">施術を選択</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>担当看護師:</label>
+                                        <select id="nurseSelect" required>
+                                            <option value="">看護師を選択</option>
+                                        </select>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">予約追加</button>
+                                </form>
+                            </div>
+
+                            <div class="panel-section">
+                                <h3>🧪 同期テスト</h3>
+                                <div class="test-buttons">
+                                    <button onclick="testAddAppointment()" class="btn btn-test">テスト予約追加</button>
+                                    <button onclick="testSyncData()" class="btn btn-test">手動同期</button>
+                                    <button onclick="clearAllData()" class="btn btn-danger">全データクリア</button>
+                                </div>
+                                <div class="test-log" id="testLog">
+                                    <p>テストログがここに表示されます</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <style>
+                    .main-app {
+                        padding: 20px;
+                        max-width: 1200px;
+                        margin: 0 auto;
+                    }
+
+                    .app-header {
+                        text-align: center;
+                        margin-bottom: 30px;
+                        padding: 20px;
+                        background: white;
+                        border-radius: 10px;
+                        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                    }
+
+                    .app-header h1 {
+                        color: #667eea;
+                        margin-bottom: 15px;
+                    }
+
+                    .data-stats {
+                        display: flex;
+                        justify-content: center;
+                        gap: 30px;
+                        font-size: 16px;
+                    }
+
+                    .app-body {
+                        display: grid;
+                        grid-template-columns: 1fr 1fr;
+                        gap: 20px;
+                    }
+
+                    .panel-section {
+                        background: white;
+                        padding: 20px;
+                        border-radius: 10px;
+                        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                        margin-bottom: 20px;
+                    }
+
+                    .panel-section h3 {
+                        color: #667eea;
+                        margin-bottom: 15px;
+                        border-bottom: 2px solid #eee;
+                        padding-bottom: 10px;
+                    }
+
+                    .appointments-list {
+                        max-height: 400px;
+                        overflow-y: auto;
+                    }
+
+                    .appointment-item {
+                        padding: 10px;
+                        border: 1px solid #eee;
+                        border-radius: 5px;
+                        margin-bottom: 10px;
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                    }
+
+                    .appointment-info {
+                        flex-grow: 1;
+                    }
+
+                    .appointment-time {
+                        font-weight: bold;
+                        color: #667eea;
+                    }
+
+                    .appointment-patient {
+                        font-size: 14px;
+                        color: #666;
+                    }
+
+                    .appointment-form {
+                        display: flex;
+                        flex-direction: column;
+                        gap: 15px;
+                    }
+
+                    .form-group {
+                        display: flex;
+                        flex-direction: column;
+                        gap: 5px;
+                    }
+
+                    .form-group label {
+                        font-weight: bold;
+                        color: #333;
+                    }
+
+                    .form-group input,
+                    .form-group select {
+                        padding: 10px;
+                        border: 1px solid #ddd;
+                        border-radius: 5px;
+                        font-size: 16px;
+                    }
+
+                    .btn {
+                        padding: 10px 20px;
+                        border: none;
+                        border-radius: 5px;
+                        cursor: pointer;
+                        font-size: 16px;
+                        transition: all 0.2s;
+                    }
+
+                    .btn-primary {
+                        background: #667eea;
+                        color: white;
+                    }
+
+                    .btn-primary:hover {
+                        background: #5a67d8;
+                    }
+
+                    .btn-test {
+                        background: #48bb78;
+                        color: white;
+                        margin: 5px;
+                    }
+
+                    .btn-test:hover {
+                        background: #38a169;
+                    }
+
+                    .btn-danger {
+                        background: #f56565;
+                        color: white;
+                        margin: 5px;
+                    }
+
+                    .btn-danger:hover {
+                        background: #e53e3e;
+                    }
+
+                    .test-buttons {
+                        display: flex;
+                        flex-wrap: wrap;
+                        gap: 10px;
+                        margin-bottom: 15px;
+                    }
+
+                    .test-log {
+                        background: #f7fafc;
+                        padding: 10px;
+                        border-radius: 5px;
+                        border-left: 4px solid #667eea;
+                        max-height: 200px;
+                        overflow-y: auto;
+                        font-family: monospace;
+                        font-size: 12px;
+                    }
+
+                    .empty-state {
+                        text-align: center;
+                        color: #999;
+                        padding: 40px 20px;
+                    }
+                </style>
+            `;
+
+            // データを読み込んでUIを更新
+            initializeApp();
+        }
+
+        // アプリケーションの初期化
+        function initializeApp() {
+            populateSelects();
+            renderAppointments();
+            setupEventListeners();
+            logMessage('🚀 アプリケーションが起動しました');
+        }
+
+        // セレクトボックスにデータを入力
+        function populateSelects() {
+            const treatmentSelect = document.getElementById('treatmentSelect');
+            const nurseSelect = document.getElementById('nurseSelect');
+
+            // 施術メニューを追加
+            window.dataManager.treatments.forEach(treatment => {
+                const option = document.createElement('option');
+                option.value = treatment.name;
+                option.textContent = treatment.name;
+                treatmentSelect.appendChild(option);
+            });
+
+            // 看護師を追加
+            window.dataManager.staff.forEach(staff => {
+                const option = document.createElement('option');
+                option.value = staff.name;
+                option.textContent = staff.name;
+                nurseSelect.appendChild(option);
+            });
+        }
+
+        // 予約一覧を表示
+        function renderAppointments() {
+            const appointmentsList = document.getElementById('appointmentsList');
+            
+            if (window.dataManager.appointments.length === 0) {
+                appointmentsList.innerHTML = '<div class="empty-state">まだ予約がありません</div>';
+                return;
+            }
+
+            appointmentsList.innerHTML = window.dataManager.appointments
+                .sort((a, b) => new Date(a.date + ' ' + a.startTime) - new Date(b.date + ' ' + b.startTime))
+                .map(appointment => `
+                    <div class="appointment-item">
+                        <div class="appointment-info">
+                            <div class="appointment-time">${appointment.date} ${appointment.startTime}</div>
+                            <div class="appointment-patient">${appointment.patientName} - ${appointment.treatmentType}</div>
+                        </div>
+                        <button onclick="deleteAppointment('${appointment.id}')" class="btn btn-danger" style="padding: 5px 10px; font-size: 12px;">削除</button>
+                    </div>
+                `).join('');
+        }
+
+        // イベントリスナーの設定
+        function setupEventListeners() {
+            const form = document.getElementById('appointmentForm');
+            form.addEventListener('submit', handleFormSubmit);
+        }
+
+        // フォーム送信の処理
+        async function handleFormSubmit(e) {
+            e.preventDefault();
+            
+            const formData = {
+                id: Date.now().toString(),
+                patientName: document.getElementById('patientName').value,
+                date: document.getElementById('appointmentDate').value,
+                startTime: document.getElementById('appointmentTime').value,
+                treatmentType: document.getElementById('treatmentSelect').value,
+                nurse: document.getElementById('nurseSelect').value
+            };
+
+            // データに追加
+            window.dataManager.appointments.push(formData);
+            
+            // 全データを保存（オンライン同期）
+            const success = await window.dataManager.saveAllData();
+            
+            if (success) {
+                logMessage(`✅ 予約追加: ${formData.patientName}様 ${formData.date} ${formData.startTime}`);
+                
+                // UIを更新
+                renderAppointments();
+                updateStats();
+                
+                // フォームをクリア
+                document.getElementById('appointmentForm').reset();
+            } else {
+                logMessage('❌ 予約の保存に失敗しました');
+            }
+        }
+
+        // 予約削除
+        async function deleteAppointment(appointmentId) {
+            const index = window.dataManager.appointments.findIndex(apt => apt.id === appointmentId);
+            if (index !== -1) {
+                const appointment = window.dataManager.appointments[index];
+                window.dataManager.appointments.splice(index, 1);
+                
+                const success = await window.dataManager.saveAllData();
+                if (success) {
+                    logMessage(`🗑️ 予約削除: ${appointment.patientName}様`);
+                    renderAppointments();
+                    updateStats();
+                }
+            }
+        }
+
+        // テスト用関数
+        function testAddAppointment() {
+            const testData = {
+                id: Date.now().toString(),
+                patientName: 'テスト患者' + Math.floor(Math.random() * 100),
+                date: new Date().toISOString().split('T')[0],
+                startTime: '10:00',
+                treatmentType: window.dataManager.treatments[0]?.name || 'テスト施術',
+                nurse: window.dataManager.staff[0]?.name || 'テスト看護師'
+            };
+
+            window.dataManager.appointments.push(testData);
+            window.dataManager.saveData('appointments');
+            renderAppointments();
+            updateStats();
+            logMessage(`🧪 テスト予約追加: ${testData.patientName}`);
+        }
+
+        function testSyncData() {
+            logMessage('🔄 手動同期を開始...');
+            window.dataManager.syncData();
+        }
+
+        async function clearAllData() {
+            if (confirm('すべてのデータをクリアしますか？')) {
+                window.dataManager.appointments = [];
+                await window.dataManager.saveData('appointments');
+                renderAppointments();
+                updateStats();
+                logMessage('🗑️ すべてのデータをクリアしました');
+            }
+        }
+
+        // 統計情報の更新
+        function updateStats() {
+            document.getElementById('appointmentCount').textContent = window.dataManager.appointments.length;
+            document.getElementById('patientCount').textContent = window.dataManager.patients.length;
+            document.getElementById('staffCount').textContent = window.dataManager.staff.length;
+        }
+
+        // ログメッセージの表示
+        function logMessage(message) {
+            const testLog = document.getElementById('testLog');
+            const time = new Date().toLocaleTimeString('ja-JP');
+            testLog.innerHTML = `<p>[${time}] ${message}</p>` + testLog.innerHTML;
+            
+            // 最大20行まで保持
+            const lines = testLog.querySelectorAll('p');
+            if (lines.length > 20) {
+                lines[lines.length - 1].remove();
+            }
+        }
+
+        // データ同期時のUI更新（DataManagerから呼び出される）
+        window.onDataUpdated = function(dataManager) {
+            renderAppointments();
+            updateStats();
+            logMessage('🔄 データが同期されました');
+        };
+    </script>
+</body>
+</html>

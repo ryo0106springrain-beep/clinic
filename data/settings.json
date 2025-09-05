@@ -1,0 +1,32 @@
+{
+  "businessHours": {
+    "start": "09:00",
+    "end": "18:00"
+  },
+  "timeSlotInterval": 30,
+  "holidays": [],
+  "rooms": [
+    {
+      "id": "R001",
+      "name": "施術室A",
+      "floor": 1,
+      "capacity": 1
+    },
+    {
+      "id": "R002", 
+      "name": "施術室B",
+      "floor": 2,
+      "capacity": 1
+    },
+    {
+      "id": "R003",
+      "name": "施術室C", 
+      "floor": 3,
+      "capacity": 1
+    }
+  ],
+  "autoSync": {
+    "enabled": true,
+    "interval": 5000
+  }
+}

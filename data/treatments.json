@@ -1,0 +1,35 @@
+[
+  { "id": 1, "name": "ﾎﾞﾄ", "color": "#fee2e2", "borderColor": "#ef4444", "defaultDuration": null, "intervalMin": null, "intervalMax": null, "subItems": [], "isExpanded": false, "restrictions": { "blockedDays": [], "startTimeLimit": null } },
+  { "id": 2, "name": "ﾋｱﾙ", "color": "#dbeafe", "borderColor": "#3b82f6", "defaultDuration": null, "intervalMin": 21, "intervalMax": 42, "subItems": [], "isExpanded": false, "restrictions": { "blockedDays": [], "startTimeLimit": null } },
+  { "id": 3, "name": "水光(院)", "color": "#dcfce7", "borderColor": "#22c55e", "defaultDuration": null, "intervalMin": 21, "intervalMax": null, "subItems": [], "isExpanded": false, "restrictions": { "blockedDays": [], "startTimeLimit": null } },
+  { "id": 4, "name": "QR", "color": "#f3e8ff", "borderColor": "#a855f7", "defaultDuration": null, "intervalMin": 21, "intervalMax": 42, "subItems": [], "isExpanded": false, "restrictions": { "blockedDays": [], "startTimeLimit": null } },
+  { "id": 5, "name": "CO2", "color": "#fef3c7", "borderColor": "#f59e0b", "defaultDuration": null, "intervalMin": 21, "intervalMax": 42, "subItems": [], "isExpanded": false, "restrictions": { "blockedDays": [], "startTimeLimit": null } },
+  { "id": 6, "name": "糸ﾘﾌﾄ", "color": "#fed7aa", "borderColor": "#fb923c", "defaultDuration": null, "intervalMin": null, "intervalMax": null, "subItems": [], "isExpanded": false, "restrictions": { "blockedDays": [], "startTimeLimit": null } },
+  { "id": 7, "name": "ﾌﾗｸ", "color": "#fce7f3", "borderColor": "#ec4899", "defaultDuration": null, "intervalMin": 21, "intervalMax": null, "subItems": [], "isExpanded": false, "restrictions": { "blockedDays": [], "startTimeLimit": null } },
+  { "id": 8, "name": "ｻﾌﾞｼ", "color": "#f0f9ff", "borderColor": "#0ea5e9", "defaultDuration": null, "intervalMin": null, "intervalMax": null, "subItems": [], "isExpanded": false, "restrictions": { "blockedDays": [], "startTimeLimit": null } },
+  { "id": 9, "name": "ｼﾞｭﾍﾞﾙｯｸ", "color": "#f0fdf4", "borderColor": "#16a34a", "defaultDuration": null, "intervalMin": null, "intervalMax": null, "subItems": [], "isExpanded": false, "restrictions": { "blockedDays": [], "startTimeLimit": null } },
+  { "id": 10, "name": "BNLS", "color": "#fffbeb", "borderColor": "#d97706", "defaultDuration": null, "intervalMin": null, "intervalMax": null, "subItems": [], "isExpanded": false },
+  { "id": 11, "name": "ﾆｰﾄﾞﾙ", "color": "#fdf2f8", "borderColor": "#e879f9", "defaultDuration": null, "intervalMin": null, "intervalMax": null, "subItems": [], "isExpanded": false },
+  { "id": 12, "name": "ﾌﾞﾙｰﾚｰｻﾞｰ", "color": "#f0f4ff", "borderColor": "#6366f1", "defaultDuration": null, "intervalMin": null, "intervalMax": null, "subItems": [], "isExpanded": false },
+  { "id": 13, "name": "ｿﾉｲｵﾝ", "color": "#f7fee7", "borderColor": "#65a30d", "defaultDuration": 60, "intervalMin": null, "intervalMax": null, "subItems": [], "isExpanded": false },
+  { "id": 14, "name": "ﾏｯP1カ所", "color": "#fef7ff", "borderColor": "#c084fc", "defaultDuration": 30, "intervalMin": null, "intervalMax": null, "subItems": [], "isExpanded": false },
+  { "id": 15, "name": "ﾏｯP2カ所", "color": "#f1f5f9", "borderColor": "#64748b", "defaultDuration": 60, "intervalMin": null, "intervalMax": null, "subItems": [], "isExpanded": false },
+  { "id": 16, "name": "ﾄｰﾆﾝｸﾞ", "color": "#fefce8", "borderColor": "#eab308", "defaultDuration": 60, "intervalMin": null, "intervalMax": null, "subItems": [], "isExpanded": false },
+  { "id": 17, "name": "ﾋﾟｺﾌﾗｸ全顔", "color": "#fff7ed", "borderColor": "#ea580c", "defaultDuration": 60, "intervalMin": null, "intervalMax": null, "subItems": [], "isExpanded": false },
+  { "id": 18, "name": "ﾋﾟｺﾌﾗｸ鼻", "color": "#f8fafc", "borderColor": "#475569", "defaultDuration": 30, "intervalMin": null, "intervalMax": null, "subItems": [], "isExpanded": false },
+  { "id": 19, "name": "ｼﾙﾌｧｰﾑ", "color": "#ecfeff", "borderColor": "#06b6d4", "defaultDuration": 90, "intervalMin": null, "intervalMax": null, "subItems": [], "isExpanded": false },
+  {
+    "id": 20,
+    "name": "ｳﾙｾﾗ",
+    "color": "#f5f3ff",
+    "borderColor": "#8b5cf6",
+    "defaultDuration": 120,
+    "subItems": [
+      { "name": "全顔", "defaultDuration": 120 },
+      { "name": "下顎", "defaultDuration": 120 },
+      { "name": "全顔下顎", "defaultDuration": 180 },
+      { "name": "頬", "defaultDuration": 100 }
+    ],
+    "isExpanded": false
+  }
+]
