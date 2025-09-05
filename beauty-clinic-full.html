@@ -416,17 +416,45 @@
                         this.patients = [];
                         break;
                     case 'staff':
-                        this.staff = [];
+                        this.staff = [
+                            {
+                                id: "N001",
+                                name: "田中看護師",
+                                type: "nurse",
+                                treatmentTypes: ["ﾎﾞﾄ", "ﾋｱﾙ", "QR", "CO2", "ﾌﾗｸ"]
+                            },
+                            {
+                                id: "N002",
+                                name: "佐藤看護師",
+                                type: "nurse",
+                                treatmentTypes: ["ﾎﾞﾄ", "ﾋｱﾙ", "QR", "CO2", "ﾌﾗｸ"]
+                            }
+                        ];
                         break;
                     case 'treatments':
-                        this.treatments = [];
+                        this.treatments = [
+                            { id: 1, name: "ﾎﾞﾄ", color: "#fee2e2", borderColor: "#ef4444" },
+                            { id: 2, name: "ﾋｱﾙ", color: "#dbeafe", borderColor: "#3b82f6" },
+                            { id: 3, name: "水光(院)", color: "#dcfce7", borderColor: "#22c55e" },
+                            { id: 4, name: "QR", color: "#f3e8ff", borderColor: "#a855f7" },
+                            { id: 5, name: "CO2", color: "#fef3c7", borderColor: "#f59e0b" },
+                            { id: 6, name: "糸ﾘﾌﾄ", color: "#fed7aa", borderColor: "#fb923c" },
+                            { id: 7, name: "ﾌﾗｸ", color: "#fce7f3", borderColor: "#ec4899" },
+                            { id: 8, name: "ｻﾌﾞｼ", color: "#f0f9ff", borderColor: "#0ea5e9" },
+                            { id: 9, name: "ｼﾞｭﾍﾞﾙｯｸ", color: "#f0fdf4", borderColor: "#16a34a" },
+                            { id: 10, name: "BNLS", color: "#fffbeb", borderColor: "#d97706" }
+                        ];
                         break;
                     case 'settings':
                         this.settings = {
                             businessHours: { start: "09:00", end: "18:00" },
                             timeSlotInterval: 30,
                             holidays: [],
-                            rooms: []
+                            rooms: [
+                                { id: "R001", name: "施術室A", floor: 1 },
+                                { id: "R002", name: "施術室B", floor: 2 },
+                                { id: "R003", name: "施術室C", floor: 3 }
+                            ]
                         };
                         break;
                 }
