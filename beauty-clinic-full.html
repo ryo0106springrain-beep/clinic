@@ -330,14 +330,19 @@
                         console.log('🌐 オンラインデータを使用');
                         this.appointments = onlineData.appointments || [];
                         this.patients = onlineData.patients || [];
-                        this.staff = onlineData.staff || [];
-                        this.treatments = onlineData.treatments || [];
-                        this.settings = onlineData.settings || {};
+                        this.staff = onlineData.staff || this.getDefaultStaff();
+                        this.treatments = onlineData.treatments || this.getDefaultTreatments();
+                        this.settings = onlineData.settings || this.getDefaultSettings();
                         this.lastModified = onlineData.lastModified;
                     } else {
                         // オンライン取得失敗時はローカルまたはデフォルトデータを使用
                         console.log('📱 ローカル/デフォルトデータを使用');
                         await this.loadFromLocal();
+                        
+                        // データが空の場合はデフォルトを設定
+                        if (this.staff.length === 0) this.staff = this.getDefaultStaff();
+                        if (this.treatments.length === 0) this.treatments = this.getDefaultTreatments();
+                        if (!this.settings.businessHours) this.settings = this.getDefaultSettings();
                     }
                     
                     this.lastSyncTime = new Date();
@@ -406,6 +411,54 @@
                 }
             }
 
+            // デフォルトスタッフデータ取得
+            getDefaultStaff() {
+                return [
+                    {
+                        id: "N001",
+                        name: "田中看護師",
+                        type: "nurse",
+                        treatmentTypes: ["ﾎﾞﾄ", "ﾋｱﾙ", "QR", "CO2", "ﾌﾗｸ"]
+                    },
+                    {
+                        id: "N002",
+                        name: "佐藤看護師",
+                        type: "nurse",
+                        treatmentTypes: ["ﾎﾞﾄ", "ﾋｱﾙ", "QR", "CO2", "ﾌﾗｸ"]
+                    }
+                ];
+            }
+
+            // デフォルト施術データ取得
+            getDefaultTreatments() {
+                return [
+                    { id: 1, name: "ﾎﾞﾄ", color: "#fee2e2", borderColor: "#ef4444" },
+                    { id: 2, name: "ﾋｱﾙ", color: "#dbeafe", borderColor: "#3b82f6" },
+                    { id: 3, name: "水光(院)", color: "#dcfce7", borderColor: "#22c55e" },
+                    { id: 4, name: "QR", color: "#f3e8ff", borderColor: "#a855f7" },
+                    { id: 5, name: "CO2", color: "#fef3c7", borderColor: "#f59e0b" },
+                    { id: 6, name: "糸ﾘﾌﾄ", color: "#fed7aa", borderColor: "#fb923c" },
+                    { id: 7, name: "ﾌﾗｸ", color: "#fce7f3", borderColor: "#ec4899" },
+                    { id: 8, name: "ｻﾌﾞｼ", color: "#f0f9ff", borderColor: "#0ea5e9" },
+                    { id: 9, name: "ｼﾞｭﾍﾞﾙｯｸ", color: "#f0fdf4", borderColor: "#16a34a" },
+                    { id: 10, name: "BNLS", color: "#fffbeb", borderColor: "#d97706" }
+                ];
+            }
+
+            // デフォルト設定データ取得
+            getDefaultSettings() {
+                return {
+                    businessHours: { start: "09:00", end: "18:00" },
+                    timeSlotInterval: 30,
+                    holidays: [],
+                    rooms: [
+                        { id: "R001", name: "施術室A", floor: 1 },
+                        { id: "R002", name: "施術室B", floor: 2 },
+                        { id: "R003", name: "施術室C", floor: 3 }
+                    ]
+                };
+            }
+
             // デフォルトデータ設定
             setDefaultData(dataType) {
                 switch(dataType) {
@@ -416,46 +469,13 @@
                         this.patients = [];
                         break;
                     case 'staff':
-                        this.staff = [
-                            {
-                                id: "N001",
-                                name: "田中看護師",
-                                type: "nurse",
-                                treatmentTypes: ["ﾎﾞﾄ", "ﾋｱﾙ", "QR", "CO2", "ﾌﾗｸ"]
-                            },
-                            {
-                                id: "N002",
-                                name: "佐藤看護師",
-                                type: "nurse",
-                                treatmentTypes: ["ﾎﾞﾄ", "ﾋｱﾙ", "QR", "CO2", "ﾌﾗｸ"]
-                            }
-                        ];
+                        this.staff = this.getDefaultStaff();
                         break;
                     case 'treatments':
-                        this.treatments = [
-                            { id: 1, name: "ﾎﾞﾄ", color: "#fee2e2", borderColor: "#ef4444" },
-                            { id: 2, name: "ﾋｱﾙ", color: "#dbeafe", borderColor: "#3b82f6" },
-                            { id: 3, name: "水光(院)", color: "#dcfce7", borderColor: "#22c55e" },
-                            { id: 4, name: "QR", color: "#f3e8ff", borderColor: "#a855f7" },
-                            { id: 5, name: "CO2", color: "#fef3c7", borderColor: "#f59e0b" },
-                            { id: 6, name: "糸ﾘﾌﾄ", color: "#fed7aa", borderColor: "#fb923c" },
-                            { id: 7, name: "ﾌﾗｸ", color: "#fce7f3", borderColor: "#ec4899" },
-                            { id: 8, name: "ｻﾌﾞｼ", color: "#f0f9ff", borderColor: "#0ea5e9" },
-                            { id: 9, name: "ｼﾞｭﾍﾞﾙｯｸ", color: "#f0fdf4", borderColor: "#16a34a" },
-                            { id: 10, name: "BNLS", color: "#fffbeb", borderColor: "#d97706" }
-                        ];
+                        this.treatments = this.getDefaultTreatments();
                         break;
                     case 'settings':
-                        this.settings = {
-                            businessHours: { start: "09:00", end: "18:00" },
-                            timeSlotInterval: 30,
-                            holidays: [],
-                            rooms: [
-                                { id: "R001", name: "施術室A", floor: 1 },
-                                { id: "R002", name: "施術室B", floor: 2 },
-                                { id: "R003", name: "施術室C", floor: 3 }
-                            ]
-                        };
+                        this.settings = this.getDefaultSettings();
                         break;
                 }
             }
