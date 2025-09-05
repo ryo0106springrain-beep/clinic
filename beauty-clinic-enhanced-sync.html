@@ -5260,6 +5260,9 @@
                     const appointment = this.appointments.find(apt => apt.id === this.currentEditingId);
                     Object.assign(appointment, formData);
                     
+                    // オンライン同期（編集時）
+                    dataManager.saveAllData();
+                    
                     // 編集時も患者がマスターに存在しない場合は自動登録
                     if (formData.patientId && formData.patientName) {
                         const existingPatient = this.patients.find(p => String(p.id) === String(formData.patientId));
@@ -10472,6 +10475,9 @@
                     appointment.startTime = newData.startTime;
                     appointment.date = newData.date;
                     
+                    // オンライン同期（編集時）
+                    dataManager.saveAllData();
+                    
                     // 終了時間の計算と検証
                     const calculatedEndTime = this.calculateEndTime(appointment.startTime, appointment.duration);
                     
@@ -11886,6 +11892,9 @@
                 if (this.currentEditingId) {
                     const appointment = this.appointments.find(apt => apt.id === this.currentEditingId);
                     Object.assign(appointment, formData);
+                    
+                    // オンライン同期（編集時）
+                    dataManager.saveAllData();
                     
                     // 編集時も患者がマスターに存在しない場合は自動登録
                     if (formData.patientId && formData.patientName) {
@@ -17838,6 +17847,9 @@
                 if (this.currentEditingId) {
                     const appointment = this.appointments.find(apt => apt.id === this.currentEditingId);
                     Object.assign(appointment, formData);
+                    
+                    // オンライン同期（編集時）
+                    dataManager.saveAllData();
                     
                     // 編集時も患者がマスターに存在しない場合は自動登録
                     if (formData.patientId && formData.patientName) {
