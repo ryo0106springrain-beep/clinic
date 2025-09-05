@@ -4711,9 +4711,12 @@
             // オンラインからデータを読み込み
             async loadFromOnline() {
                 try {
+                    console.log('📡 APIキー送信中:', this.apiKey ? 'あり' : 'なし');
                     const response = await fetch(`${this.baseUrl}${this.binId}/latest`, {
+                        method: 'GET',
                         headers: {
-                            'X-Master-Key': this.apiKey
+                            'X-Master-Key': this.apiKey,
+                            'Content-Type': 'application/json'
                         }
                     });
 
@@ -4721,10 +4724,14 @@
                         const result = await response.json();
                         console.log('📡 オンラインデータ取得成功（Enhanced版）');
                         return result.record;
+                    } else {
+                        console.error('❌ API応答エラー:', response.status, response.statusText);
+                        const errorText = await response.text();
+                        console.error('❌ エラー内容:', errorText);
+                        return null;
                     }
-                    return null;
                 } catch (error) {
-                    console.warn('⚠️ オンライン接続エラー:', error);
+                    console.error('⚠️ オンライン接続エラー:', error);
                     return null;
                 }
             }
